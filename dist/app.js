@@ -1,4 +1,4 @@
-import {generatePrompt} from './engine.js';
+import {generatePrompt} from './engine.js?v=2.0';
 const $=id=>document.getElementById(id);
 let data,selected,department='all',expanded=false,hasResult=false;
 $('custom').disabled=true;
@@ -40,21 +40,23 @@ function fillExample(task){
   description:'【虛構操作範例】請整理一份 30 人企業工作坊籌備檢查表，涵蓋講師、教材、設備、報名通知與當日報到。',
   audience:'課務與行銷合作窗口',answers:{q1:'用表格呈現工作項目、建議負責角色、期限、完成標準與備案。',q2:'同仁能看懂下一步，且每件事都有交付與檢查方式。'},
   source:'虛構示範：活動距今四週，課務與行銷各一位同仁支援，確切日期與預算待確認。',
-  constraints:'繁體中文、精簡且能直接執行；未知事項標示待確認。',mode:'draft'
+  constraints:'繁體中文、精簡且能直接執行；未知事項標示待確認。',mode:'draft',
+  successCriteria:'活動負責人可依檢查表逐項走查，每個工作都有交付、建議角色與驗收證據；未確認的期限不寫成既定事實。',
+  availableTools:'人工走查與共用試算表；沒有額外系統權限。',assumption:''
  };
  selectTask(task);
- for(const id of ['goal','description','audience','source','constraints','mode']){
-  $(id).value=sample[id];$(id).setCustomValidity('');
+ for(const id of ['goal','description','audience','source','constraints','mode','successCriteria','availableTools','assumption']){
+  $(id).value=sample[id]||'';$(id).setCustomValidity('');
  }
  for(const q of task.questions)$(q.id).value=sample.answers[q.id]||'';
  $('extras').open=true;
  $('example-status').textContent=`已帶入「${task.title}」範例。內容為虛構示範，可直接修改，再按「產生我的提示詞」。`;
  markStale();$('brief-title').scrollIntoView({block:'start',behavior:'smooth'});$('goal').focus({preventScroll:true});
 }
-function request(){return {goal:$('goal').value,description:$('description').value,audience:$('audience').value,source:$('source').value,constraints:$('constraints').value,mode:$('mode').value,answers:Object.fromEntries(selected.questions.map(q=>[q.id,$(q.id).value]))};}
+function request(){return {goal:$('goal').value,description:$('description').value,audience:$('audience').value,source:$('source').value,constraints:$('constraints').value,mode:$('mode').value,successCriteria:$('successCriteria').value,availableTools:$('availableTools').value,assumption:$('assumption').value,answers:Object.fromEntries(selected.questions.map(q=>[q.id,$(q.id).value]))};}
 function fitOutput(){const e=$('output');e.style.height='auto';e.style.height=(e.scrollHeight+4)+'px';}
 $('prompt-form').addEventListener('submit',e=>{e.preventDefault();for(const id of ['goal','description']){const el=$(id);el.setCustomValidity(el.value.trim()?'':'請填寫這個欄位，讓提示詞有明確的工作方向。');if(!el.reportValidity())return;}const result=generatePrompt(selected,request());$('empty').hidden=true;$('result-content').hidden=false;$('output').value=result.text;$('result-meta').textContent=`${selected.title} · ${result.text.length.toLocaleString()} 字`;$('missing').replaceChildren();for(const item of result.missing.length?result.missing:['欄位已填妥；貼到 AI 工具後，仍可依回覆補上必要細節。'])$('missing').append(make('li','',item));hasResult=true;$('stale').hidden=true;$('copy').disabled=false;$('copy-status').textContent='已產生完整提示詞，可複製到 AI 工具。';fitOutput();$('result-title').focus({preventScroll:true});$('result-title').scrollIntoView({behavior:'smooth',block:'start'});});
-for(const id of ['goal','description','audience','source','constraints','mode'])$(id).addEventListener('input',()=>{$(id).setCustomValidity?.('');markStale();});
+for(const id of ['goal','description','audience','source','constraints','mode','successCriteria','availableTools','assumption'])$(id).addEventListener('input',()=>{$(id).setCustomValidity?.('');markStale();});
 $('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('output').value);$('copy-status').textContent='已複製。貼到 AI 工具後，記得補上來源檔案。';$('copy').textContent='已複製 ✓';setTimeout(()=>$('copy').textContent='複製提示詞',2200);}catch{$('output').focus();$('output').select();$('copy-status').textContent='瀏覽器未允許自動複製，已選取文字。請按 Ctrl+C（Mac：⌘C），手機請長按複製。';}};
 $('search').oninput=()=>{expanded=false;renderTasks();};$('expand').onclick=()=>{expanded=!expanded;renderTasks();};$('custom').onclick=()=>selectTask(custom,true);$('edit').onclick=()=>{$('goal').focus();$('brief-title').scrollIntoView({behavior:'smooth'});};
 $('reset').onclick=()=>{if(!confirm('確定清除目前需求與提示詞，重新開始？'))return;$('prompt-form').reset();for(const id of ['goal','description'])$(id).setCustomValidity('');hasResult=false;$('empty').hidden=false;$('result-content').hidden=true;$('output').value='';$('search').value='';department='all';expanded=false;renderDepartments();selectTask(data.tasks.find(t=>t.id==='E01'));$('goal').focus();};

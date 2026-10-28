@@ -23,3 +23,35 @@ for(const t of data.tasks){
  assert.ok(result.text.includes(sample.answers.q2),t.id);
 }
 console.log('PASS: all 160 task-specific examples include complete fields, distinct scenarios, matching question answers and usable generated prompts.');
+// 驗證生成內容真的要求原始材料、工作方法及外部驗收，並保留使用者邊界。
+for(const t of data.tasks){
+ const sample=t.example;
+ assert.ok(sample.successCriteria?.trim(),t.id);
+ assert.ok(sample.availableTools?.trim(),t.id);
+ const result=generatePrompt(t,sample);
+ assert.equal(result.qualityVersion,'2.0');
+ assert.ok(result.text.includes(sample.successCriteria),t.id);
+ assert.ok(result.text.includes(sample.availableTools),t.id);
+ assert.ok(result.text.includes('不以專業口吻代替'),t.id);
+ assert.ok(result.text.includes('【專業方法與原始材料】'),t.id);
+ assert.ok(result.text.includes('【外部驗證與完成標準】'),t.id);
+ assert.ok(result.text.includes('尚未驗證'),t.id);
+ assert.ok(result.text.includes('不擅自增加專案'),t.id);
+ if(sample.assumption)assert.ok(result.text.includes(sample.assumption),t.id);
+}
+const constrained=generatePrompt(task,{...base,successCriteria:'主管在 15 分鐘內選出一個方案',availableTools:'只有試算表，沒有瀏覽器',assumption:'業績差距可能源自轉換率下降'}).text;
+assert.ok(constrained.includes('主管在 15 分鐘內選出一個方案'));
+assert.ok(constrained.includes('只有試算表，沒有瀏覽器'));
+assert.ok(constrained.includes('可能推翻這個假設的證據'));
+assert.ok(constrained.includes('不擅自安裝'));
+assert.ok(constrained.includes('可測試替代方案'));
+const samples=Object.fromEntries(['E01','M08','S14','T04','S05','P04'].map(id=>{const t=data.tasks.find(x=>x.id===id);return [id,generatePrompt(t,t.example).text];}));
+assert.ok(samples.E01.includes('成本與取捨'));
+assert.ok(samples.M08.includes('文字逐字正確性'));
+assert.ok(samples.S14.includes('可重算的公式'));
+assert.ok(samples.T04.includes('工作轉移'));
+assert.ok(samples.S05.includes('不預告保證轉換率'));
+assert.ok(samples.P04.includes('空資料、失敗與權限'));
+// 舊版呼叫及自訂任務仍可使用，不強迫新增欄位。
+assert.ok(generatePrompt({...task,id:'custom',departmentId:'custom',outputType:'plan'},base).text.includes('建議的驗收規準'));
+console.log('PASS: all 160 upgraded prompts carry outcome, actionable methods, raw evidence, external validation and scope limits; user criteria/tools/hypotheses and six output types verified.');

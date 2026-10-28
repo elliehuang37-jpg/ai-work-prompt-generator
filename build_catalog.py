@@ -188,10 +188,10 @@ for line in source.read_text(encoding='utf-8').splitlines():
             'communication' if id in ('S02','S04','S05','S06','S07','S08','S10','S11','S16','S17','S18','S19','S20','M05','M06','M12','M13','M18','M19','H02','H05','H06','H07','H10','H16','H17','H18','C01','C02','C03','C04','C05','C06','C07','C13','C17','C18','O14','P17','E19') else 'plan')
     tasks.append(dict(id=id,departmentId=id[0],title=title,scenario=scenario,role=roles[id[0]],outputType=kind,
         keywords=f'{title} {scenario} {output}',questions=[dict(id=f'q{i+1}',label=q,hint='可列重點；不知道的部分可以留白。') for i,q in enumerate(questions[id[0]][int(id[1:])-1])],
-        deliverableSpec=output.split('、'),qualityChecks=[f'內容必須回應「{scenario}」的實際工作問題',f'逐項檢查是否交付：{output}','區分已知事實、假設與待確認事項，避免無根據的承諾'],templateVersion='1.0'))
+        deliverableSpec=output.split('、'),qualityChecks=[f'內容必須回應「{scenario}」的實際工作問題',f'逐項檢查是否交付：{output}','區分已知事實、假設與待確認事項，避免無根據的承諾'],templateVersion='2.0'))
 assert len(tasks)==160 and len(set(t['id'] for t in tasks))==160
 for task in tasks:
     task['example'] = task_example(task)
-data=dict(version='1.0',departments=[dict(id=i,name=n,en=e) for i,n,e in departments],tasks=tasks)
+data=dict(version='2.0',departments=[dict(id=i,name=n,en=e) for i,n,e in departments],tasks=tasks)
 (root/'dist/catalog.json').write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8')
 print(f'Catalog ready: {len(tasks)} tasks, {len(departments)} departments')

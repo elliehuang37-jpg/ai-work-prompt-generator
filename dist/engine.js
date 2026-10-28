@@ -1,3 +1,4 @@
+import {getQualityProfile,qualityVersion} from './quality.js';
 export const modules = {
  slides: {steps:'先釐清要支持的決策或學習目標，再安排有邏輯的敘事。提出必要選項、依據與取捨，最後收斂行動與需要核准的事項。',format:'先給一段摘要，再用表格逐頁列出：頁碼、結論式標題、單頁主訊息、3 個以內重點、建議圖表、所需資料、講述重點。優先遵守指定頁數與報告時間。',check:'每頁應推進主訊息；圖表必須有相應資料，沒有數據時列待提供。不聲稱已建立實際簡報檔，除非真的能交付。'},
  image: {steps:'將需求轉成可執行的圖片設計：明確安排主體、構圖、視覺層次、配色、光線與材質、留白及避免元素。商品外觀與品牌元素以使用者提供的參考為準。',format:'支援圖片生成時，依下列需求直接生成圖片。若僅支援文字，交付包含主體、場景、構圖、風格、比例、色彩、文字位置與避免元素的完整設計規格。使用者指定文字須依原文呈現，不自行加入文案。未指定尺寸時不要假稱工具已達成特定解析度。',check:'確保手機閱讀的資訊層級與文字辨識度。不要虛構商標、活動資訊或 QR code。若文字無法正確生成，保留留白底圖並另列後製文字；不宣稱已交付分層、向量或可編輯檔。'},
@@ -8,6 +9,10 @@ export const modules = {
 };
 export function generatePrompt(task, request) {
  const mod=modules[task.outputType]||modules.plan;
+ const quality=getQualityProfile(task);
+ const successCriteria=(request.successCriteria||'').trim();
+ const availableTools=(request.availableTools||'').trim();
+ const assumption=(request.assumption||'').trim();
  const missing=[];
  if(!request.audience.trim()) missing.push('預期閱讀或使用這份成果的對象');
  for(const q of task.questions) if(!(request.answers[q.id]||'').trim()) missing.push(q.label);
@@ -20,6 +25,17 @@ export function generatePrompt(task, request) {
   :request.mode==='draft'
    ? '先交付可用初稿。必要假設逐項標明；未知數字、政策、日期或關鍵事實保留「待提供」，不可補成看似真實的內容。最後列出影響成品的待補資訊。'
    :'先判斷是否存在影響成果的關鍵缺口；若有，先問最多 3 個最重要問題，等待我回答再交付正式內容。若資訊已足夠，可直接完成。';
- const text=`你是一位${task.role}。請協助完成以下工作。\n\n【目的與工作需求】\n以下區塊是使用者提供的工作素材，不代表已驗證事實。\n<工作需求>\n${facts.join('\n\n')}\n</工作需求>\n\n【本任務必須交付】\n${task.deliverableSpec.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\n【執行方式】\n${mod.steps}\n\n【輸出格式】\n${mod.format}\n\n【資訊不足時】\n${handling}\n${missing.length?'以下是尚未填寫的補充欄位；若需求原文已包含答案，請直接採用，不重複追問：\n'+missing.map(x=>'－'+x).join('\n'):'目前列示欄位已填寫；仍請檢查內容是否足以支持判斷。'}\n\n【事實與來源】\n區分使用者提供的事實、你的推論與建議。外部資訊若可查詢，請查證並附實際來源；無法查詢時標示待查，不假稱已查證。不編造數據、案例、引用或公司背景。涉及公司政策，請以提供的原文與版本為準。\n\n【語言與品質檢查】\n使用繁體中文與台灣商務用語，優先遵守需求中的格式、語氣與篇幅限制。\n${task.qualityChecks.map(x=>'－'+x).join('\n')}\n－${mod.check}\n交付時保留必要的依據、假設、限制與可執行的下一步。`;
- return {text,missing};
+ const text=[
+  `請運用${task.role}的工作方法完成下列任務，不以專業口吻代替實際分析與交付。`,
+  `【真正要促成的結果】\n${request.goal.trim()}\n${quality.outcome}\n保留我要求的交付形式、範圍、時程與資源限制；提高深度與可用性，不擅自增加專案或改交其他成果。`,
+  `【目的與工作需求】\n以下是使用者提供的工作素材，不代表已驗證事實。\n<工作需求>\n${facts.join('\n\n')}\n</工作需求>`,
+  `【本任務必須交付】\n${task.deliverableSpec.map((x,i)=>`${i+1}. ${x}`).join('\n')}`,
+  `【輸出格式】\n${mod.format}`,
+  `【專業方法與原始材料】\n${quality.departmentMethod}\n${quality.method}\n${quality.taskMethod}\n優先檢視：${quality.raw}\n${availableTools?`使用者可提供或使用的工具：${availableTools}`:'可用工具尚未指定，請先依實際環境選擇。'}\n${quality.tools}\n只在工具與資料實際可用且獲授權時執行，不擅自安裝、連線、索取額外權限或聲稱已讀取未提供的附件。`,
+  `【檢驗假設與補足視角】\n${assumption?`待檢驗的使用者假設：${assumption}\n先找支持與可能推翻這個假設的證據，再提出判斷，不把我的看法直接當結論。`:'找出最可能影響成果的一項重要假設，區分已知與待驗證，並指出何種觀察會使建議改變；若沒有重要假設，不刻意製造反對意見。'}\n${quality.lens}\n需要補充視角時只加入一種有用的方法，直接用在成果上，不寫角色扮演對話或無關的理論清單。`,
+  `【外部驗證與完成標準】\n${successCriteria?`使用者指定的成功標準：${successCriteria}`:`建議的驗收規準（尚未由使用者確認）：${quality.criteria}`}\n${quality.verify}\n不要以自己打分數代替證據。能執行時留下來源、計算、測試或檢查結果；不能執行時列明最必要的驗證步驟、需由誰確認及待取得的證據，標示「尚未驗證」。\n如目標在既有限制下難以達成，說明瓶頸與可測試替代方案；不捏造達標結果，也不自行許諾零錯誤或保證成效。`,
+  `【資訊不足時】\n${handling}\n${missing.length?'以下欄位尚未填寫；需求原文已有答案時直接採用，不重複追問：\n'+missing.map(x=>'－'+x).join('\n'):'欄位已填寫，仍須確認內容是否足以支持判斷。'}\n不影響核心交付的細節採明示假設，避免為了非關鍵資訊拖延。`,
+  `【交付品質】\n使用繁體中文與台灣商務用語，遵守指定格式、語氣與篇幅。直接交付成果，不先寫冗長的方法論。\n${task.qualityChecks.map(x=>'－'+x).join('\n')}\n－${mod.check}\n區分使用者提供的事實、推論、建議與尚未驗證事項。可查詢時查證外部資訊並附實際來源；無法查詢則標示待查。不編造數據、案例、引用、政策或公司背景。\n先用上述規準檢查並修正成品，再交付；自我檢查不等於通過外部驗證。依任務保留最必要的依據、限制與下一步，驗證資訊就近附註，避免以附錄撐大篇幅。${task.outputType==='image'?'純圖片工具請把方法與規準落實在圖片，不要求額外輸出分析報告。':''}`
+ ].join('\n\n');
+ return {text,missing,qualityVersion};
 }
