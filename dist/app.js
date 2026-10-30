@@ -1,4 +1,4 @@
-import {generatePrompt} from './engine.js?v=2.0';
+import {generatePrompt} from './engine.js?v=2.1';
 const $=id=>document.getElementById(id);
 let data,selected,department='all',expanded=false,hasResult=false;
 $('custom').disabled=true;
@@ -11,7 +11,7 @@ function renderDepartments(){ $('departments').replaceChildren();for(const d of 
 function renderTasks(){
  const q=$('search').value.trim().toLowerCase();
  let matches=data.tasks.filter(t=>(department==='all'||t.departmentId===department)&&(!q||(t.keywords+' '+data.departments.find(d=>d.id===t.departmentId).name).toLowerCase().includes(q)));
- if(department==='all'&&!q){const featured=['E01','M08','T04','S05','P04','O05'];matches=[...featured.map(id=>data.tasks.find(t=>t.id===id)),...matches.filter(t=>!featured.includes(t.id))];}
+ if(department==='all'&&!q){const featured=['F01','F02','D06','D08','E01','M08'];matches=[...featured.map(id=>data.tasks.find(t=>t.id===id)),...matches.filter(t=>!featured.includes(t.id))];}
  const limit=expanded?matches.length:6;
  $('count').textContent=`${q?'找到':'共'} ${matches.length} 項任務${selected?.id==='custom'?' · 已選自訂任務':''}`;
  $('task-grid').replaceChildren();
@@ -63,5 +63,5 @@ $('reset').onclick=()=>{if(!confirm('確定清除目前需求與提示詞，重�
 $('example').onclick=()=>fillExample(selected);
 $('fill-example').onclick=()=>fillExample(selected);
 window.addEventListener('resize',()=>{if(hasResult)fitOutput();});
-try{const r=await fetch('catalog.json');if(!r.ok)throw Error('catalog unavailable');data=await r.json();renderDepartments();selectTask(data.tasks.find(t=>t.id==='E01'));$('generate').disabled=false;}catch(error){$('load-error').hidden=false;$('count').textContent='暫時無法載入任務庫';$('custom').disabled=true;$('example').disabled=true;console.error(error);}
+try{const r=await fetch('catalog.json?v=2.1');if(!r.ok)throw Error('catalog unavailable');data=await r.json();renderDepartments();selectTask(data.tasks.find(t=>t.id==='E01'));$('generate').disabled=false;}catch(error){$('load-error').hidden=false;$('count').textContent='暫時無法載入任務庫';$('custom').disabled=true;$('example').disabled=true;console.error(error);}
 if(selected){$('custom').disabled=false;$('example').disabled=false;$('fill-example').disabled=false;}

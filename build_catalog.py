@@ -2,14 +2,16 @@
 import json, re
 from pathlib import Path
 from example_scenarios import task_example
+from department_extensions import DEPARTMENTS, ROLES, QUESTIONS
 
 root = Path(__file__).resolve().parent
 source = root / 'data/部門任務清單.md'
 departments = [
  ('S','業務','Sales'), ('M','行銷','Marketing'), ('T','訓練','Learning'),
  ('H','人力資源','People'), ('C','客服','Customer'), ('O','營運行政','Operations'),
- ('P','專案管理','Projects'), ('E','經營策略','Strategy')]
+ ('P','專案管理','Projects'), ('E','經營策略','Strategy')]+DEPARTMENTS
 roles = dict(S='企業業務開發與銷售管理顧問',M='品牌行銷與內容策略顧問',T='成人學習與企業培訓設計師',H='人力資源與組織發展顧問',C='顧客體驗與客服營運顧問',O='企業營運與流程改善顧問',P='跨部門專案管理顧問',E='企業經營策略與高階主管溝通顧問')
+roles.update(ROLES)
 # 各任務專屬提問；以 | 分隔兩個與工作判斷直接相關的條件。
 questions = {
 'S': '''想開發的客群與產品是什麼？|目前有哪些接觸管道與客戶線索？
@@ -173,15 +175,19 @@ questions = {
 演講場合、對象與核心訊息？|時長、可公開事例與希望的行動？
 策略目標、關鍵選擇與資源？|核心行動、負責角色與追蹤指標？'''
 }
+questions.update(QUESTIONS)
 for key, value in questions.items():
     questions[key] = [line.split('|') for line in value.splitlines()]
     assert len(questions[key]) == 20, key
 tasks=[]
 for line in source.read_text(encoding='utf-8').splitlines():
-    m = re.match(r'^\| ([SMTHCOPE]\d{2}) \| (.*?) \| (.*?) \| (.*?) \|$', line)
+    m = re.match(r'^\| ([SMTHCOPEFD]\d{2}) \| (.*?) \| (.*?) \| (.*?) \|$', line)
     if not m: continue
     id,title,scenario,output=m.groups()
-    kind = ('image' if id in ('M08','M09') else
+    kind = ('finance' if (id.startswith('F') and id not in ('F11','F19','F20')) or id in ('D05','D13') else
+            'communication' if id in ('D01','D09','D10','D17','D19','D20') else
+            'analysis' if id in ('D02','D06','D07','D08','D11','D14','D15','D18') else
+            'image' if id in ('M08','M09') else
             'slides' if id in ('E01','E11','T05') else
             'analysis' if id in ('S14','M15','M17','H13','C09','C15','C20','O07','O10','O13','E05','E14','E16','E17') else
             'training' if id.startswith('T') else
@@ -189,9 +195,10 @@ for line in source.read_text(encoding='utf-8').splitlines():
     tasks.append(dict(id=id,departmentId=id[0],title=title,scenario=scenario,role=roles[id[0]],outputType=kind,
         keywords=f'{title} {scenario} {output}',questions=[dict(id=f'q{i+1}',label=q,hint='可列重點；不知道的部分可以留白。') for i,q in enumerate(questions[id[0]][int(id[1:])-1])],
         deliverableSpec=output.split('、'),qualityChecks=[f'內容必須回應「{scenario}」的實際工作問題',f'逐項檢查是否交付：{output}','區分已知事實、假設與待確認事項，避免無根據的承諾'],templateVersion='2.0'))
-assert len(tasks)==160 and len(set(t['id'] for t in tasks))==160
+assert len(tasks)==200 and len(set(t['id'] for t in tasks))==200
+assert all(sum(t['departmentId']==d[0] for t in tasks)==20 for d in departments)
 for task in tasks:
     task['example'] = task_example(task)
-data=dict(version='2.0',departments=[dict(id=i,name=n,en=e) for i,n,e in departments],tasks=tasks)
+data=dict(version='2.1',departments=[dict(id=i,name=n,en=e) for i,n,e in departments],tasks=tasks)
 (root/'dist/catalog.json').write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8')
 print(f'Catalog ready: {len(tasks)} tasks, {len(departments)} departments')
