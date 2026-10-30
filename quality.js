@@ -1,6 +1,8 @@
+import {financeProfile,addedDepartmentRules,addedTaskRules} from './department-rules.js';
 // 將成果、實際方法與可觀察驗收連到每種任務；不呼叫模型。
 export const qualityVersion='2.0';
 const kinds={
+ finance:financeProfile,
  slides:{
   outcome:'讓讀者看懂變化與依據，並能做出明確決定或採取下一步；不是只填滿投影片。',
   raw:'原始營運明細、指標定義、目標與比較期間、既有提案及決策限制；教學簡報改以核准教材與學員能力資料為準。',
@@ -57,6 +59,7 @@ const kinds={
  }
 };
 const departments={
+ ...addedDepartmentRules,
  S:'以客戶原話、商機階段與決策條件釐清需求，分開已確認訊息與銷售假設；成交結果仍取決於客戶決策。',
  M:'將受眾、訊息、管道與預期行動連起來，以素材反應或轉換資料驗證訴求；沒有數據不宣稱內容必然有效。',
  T:'以工作任務及可觀察技能為核心，區分能力問題、工具問題與管理條件，不把所有績效落差都歸因於缺課。',
@@ -67,6 +70,7 @@ const departments={
  E:'把要做的決策、可比較的選項、證據與資源取捨放在一起；區分營運觀察、策略假設與建議。'
 };
 const taskMethods={
+ ...addedTaskRules,
  S05:'先分類價格、價值、風險或時機異議，釐清原話的意思，再給對應證據與可兌現選項。',
  S14:'將目標差額拆到通路、客群、活動量與轉換條件，核對各項貢獻是否能重組回總差額。',
  S20:'辨識雙方利益、可交換條件與無法接受的底線，準備可退回的替代方案，不擅自授權讓步。',
