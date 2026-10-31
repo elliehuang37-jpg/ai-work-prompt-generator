@@ -16,6 +16,16 @@ GitHub Pages 使用 `gh-pages` 分支發布 `dist/` 的靜態檔案。不需要�
 
 部署用檔案位於 `dist/`。需使用 HTTP 伺服器或靜態託管，以便載入任務 JSON 與 JavaScript 模組。
 
+## PWA 與離線使用
+
+- `dist/manifest.webmanifest` 使用相對路徑及獨立視窗模式，適用 GitHub Pages 子目錄。
+- `dist/icons/` 提供 192、512、maskable 512 及 Apple 180 PNG；`make_pwa_icons.py` 可重建原創圖示。
+- `dist/sw.js` 首次連線時完整快取任務庫、生成程式、樣式及圖片；下載完成才顯示離線可用。使用者輸入不寫入快取。
+- `dist/pwa.js` 提供安裝提示、離線狀態與手動更新；新版不強制清除輸入，按更新前會標明重新載入會清除本頁輸入。
+- iPhone 用 Safari 的「分享 → 加入主畫面」；Android 用 Chrome 的安裝按鈕或選單。首次載入完成後可離線生成提示詞；外部 AI 工具仍需連線。
+- **每次修改已部署的快取檔案，務必更新 `sw.js` 的 `CACHE_NAME` 版本。** 新增／改名靜態檔或 query 版本時同步更新 `SHELL`。不刪除其他應用程式的快取。
+- `node check-pwa.mjs` 檢查路徑、快取完整性、離線載入、快取清理範圍與下載失敗處理。
+
 ## 維護
 
 - `dist/catalog.json`：完整任務資料，每項含專屬追問、角色、交付規格與品質要求。
